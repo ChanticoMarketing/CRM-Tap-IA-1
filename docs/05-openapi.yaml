@@ -1,0 +1,327 @@
+# Especificación OpenAPI (Swagger) - v1
+
+openapi: 3.0.3
+info:
+  title: CRM API
+  version: 1.0.0
+  description: API para gestión de leads, pipeline, tareas y usuarios
+
+servers:
+  - url: https://api.crm.example.com/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  
+  schemas:
+    Lead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        owner_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        company:
+          type: string
+        source:
+          type: string
+          enum: [web, referral, import, api]
+        status:
+          type: string
+          enum: [new, contacted, qualified, disqualified]
+        health_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        created_at:
+          type: string
+          format: date-time
+    
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        assignee_id:
+          type: string
+          format: uuid
+        lead_id:
+          type: string
+          format: uuid
+          nullable: true
+        type:
+          type: string
+          enum: [call, email, meeting, followup]
+        priority:
+          type: string
+          enum: [high, medium, low]
+        title:
+          type: string
+        due_date:
+          type: string
+          format: date
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+    
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+security:
+  - bearerAuth: []
+
+paths:
+  /leads:
+    get:
+      summary: Listar leads
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [new, contacted, qualified, disqualified]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Lista de leads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Lead'
+    
+    post:
+      summary: Crear lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                company:
+                  type: string
+                source:
+                  type: string
+                  enum: [web, referral, import, api]
+      responses:
+        '201':
+          description: Lead creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lead'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /leads/{id}:
+    get:
+      summary: Obtener lead por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lead encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lead'
+        '404':
+          description: Lead no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    put:
+      summary: Actualizar lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                status:
+                  type: string
+                  enum: [new, contacted, qualified, disqualified]
+                health_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+      responses:
+        '200':
+          description: Lead actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lead'
+        '404':
+          description: Lead no encontrado
+    
+    delete:
+      summary: Eliminar lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Lead eliminado
+        '404':
+          description: Lead no encontrado
+
+  /tasks:
+    get:
+      summary: Listar tareas
+      parameters:
+        - name: assignee_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [high, medium, low]
+      responses:
+        '200':
+          description: Lista de tareas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+    
+    post:
+      summary: Crear tarea
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assignee_id, type, title, due_date]
+              properties:
+                assignee_id:
+                  type: string
+                  format: uuid
+                lead_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                type:
+                  type: string
+                  enum: [call, email, meeting, followup]
+                priority:
+                  type: string
+                  enum: [high, medium, low]
+                title:
+                  type: string
+                description:
+                  type: string
+                due_date:
+                  type: string
+                  format: date
+      responses:
+        '201':
+          description: Tarea creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+
+  /auth/login:
+    post:
+      summary: Login de usuario
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Token JWT
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  expires_in:
+                    type: integer

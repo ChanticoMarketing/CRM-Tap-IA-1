@@ -1,0 +1,3 @@
+# Documentation files are source content - no need to ignore them
+# The added files are markdown and YAML documentation files which should be version controlled
+# No build artifacts, dependencies, or temporary files detected in changes
